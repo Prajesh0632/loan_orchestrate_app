@@ -38,3 +38,21 @@ Thumbs.db
 # Temporary files
 *.tmp
 .cache/
+
+# Vite
+.vite/
+
+# Output files
+out/
+dist-ssr/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Runtime
+node_modules/.bin/
+
+# Misc
+*.tsbuildinfo
+*.pem
