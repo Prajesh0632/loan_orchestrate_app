@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, useEffect } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
@@ -65,15 +65,15 @@ function AuthShell({
             )}
             <label>
               <span>{usernameLabel}</span>
-              <input type="text" name="username" placeholder={usernamePlaceholder} autoComplete={usernameAutoComplete} />
+              <input type="text" name="auth_username" placeholder={usernamePlaceholder} autoComplete={usernameAutoComplete} />
             </label>
             <label>
               <span>Password</span>
               <input
                 type="password"
-                name="password"
+                name="auth_password"
                 placeholder="Enter your password"
-                autoComplete={showNameField ? 'new-password' : 'current-password'}
+                autoComplete="off"
               />
             </label>
             <button className="primary-button" type="submit">
@@ -99,21 +99,50 @@ function AuthShell({
 
 export function SignInPage() {
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setLoading(true)
+    setError('')
+    
     const formData = new FormData(event.currentTarget)
-    const username = String(formData.get('username') ?? '').trim()
-    const password = String(formData.get('password') ?? '').trim()
+    const username = String(formData.get('auth_username') ?? '').trim()
+    const password = String(formData.get('auth_password') ?? '').trim()
 
-    if (username === 'Prajesh' && password === 'Prajesh') {
-      setError('')
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      })
+
+
+      if (!response.ok) {
+        setError('Connection error. Please try again')
+        setLoading(false)
+        return
+      }
+
+      const data = await response.json();
+      if(!data.status) {
+        setError(data.message)
+        setLoading(false)
+        return
+
+      }
+      setLoading(false)
       navigate('/dashboard', { replace: true })
-      return
+    } catch (err) {
+      setError('Connection error. Please try again.')
+      console.error(err)
+      setLoading(false)
     }
-
-    setError('Invalid username or password.')
   }
 
   return (
@@ -125,7 +154,7 @@ export function SignInPage() {
       footerLink={{ href: '/signup', label: 'Create an account' }}
       usernameLabel="Username"
       usernamePlaceholder="Prajesh"
-      usernameAutoComplete="username"
+      usernameAutoComplete="off"
       submitError={error}
       onSubmit={handleSubmit}
     />
@@ -133,6 +162,58 @@ export function SignInPage() {
 }
 
 export function SignUpPage() {
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setLoading(true)
+    setError('')
+
+    const formData = new FormData(event.currentTarget)
+    const username = String(formData.get('auth_username') ?? '').trim()
+    const password = String(formData.get('auth_password') ?? '').trim()
+
+    if (!username || !password) {
+      setError('Please fill in all fields.')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      })
+
+      
+
+      if (!response.ok) {
+        setError('Connection error. Please try again')
+        setLoading(false)
+        return
+      }
+
+      const data = await response.json()
+     if(!data.status) {
+        setError(data.message)
+        setLoading(false)
+        return
+
+      }
+      setLoading(false)
+      navigate('/signin', { replace: true })
+    } catch (err) {
+      setError('Connection error. Please try again.')
+      console.error(err)
+      setLoading(false)
+    }
+  }
+
   return (
     <AuthShell
       heading="Sign up"
@@ -140,8 +221,11 @@ export function SignUpPage() {
       actionLabel="Create account"
       footerText="Already have an account?"
       footerLink={{ href: '/signin', label: 'Continue to sign in' }}
-      showNameField
-      onSubmit={(event) => event.preventDefault()}
+      usernameLabel="Username"
+      usernamePlaceholder="john_doe"
+      usernameAutoComplete="username"
+      submitError={error}
+      onSubmit={handleSubmit}
     />
   )
 }
