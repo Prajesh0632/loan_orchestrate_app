@@ -114,7 +114,8 @@ export function SignInPage() {
     const password = String(formData.get('auth_password') ?? '').trim()
 
     try {
-      const response = await fetch('/api/login', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5173/api'
+      const response = await fetch(`${apiUrl}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +183,8 @@ export function SignUpPage() {
     }
 
     try {
-      const response = await fetch('/api/signup', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5173/api'
+      const response = await fetch(`${apiUrl}/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
