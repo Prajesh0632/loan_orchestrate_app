@@ -125,14 +125,15 @@ export function SignInPage() {
 
 
       if (!response.ok) {
-        setError('Connection error. Please try again')
+        const errorData = await response.json()
+        setError(errorData.detail || 'Invalid username or password.')
         setLoading(false)
         return
       }
 
       const data = await response.json();
       if(!data.status) {
-        setError(data.message)
+        setError(data.message || 'Login failed')
         setLoading(false)
         return
 
@@ -195,7 +196,8 @@ export function SignUpPage() {
       
 
       if (!response.ok) {
-        setError('Connection error. Please try again')
+        const errorData = await response.json()
+        setError(errorData.detail || 'Failed to create account.')
         setLoading(false)
         return
       }
