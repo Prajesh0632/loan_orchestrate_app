@@ -1,5 +1,5 @@
 import { useState, type FormEvent, useEffect } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Loader } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 type AuthShellProps = {
@@ -14,6 +14,7 @@ type AuthShellProps = {
   usernamePlaceholder?: string
   usernameAutoComplete?: string
   submitError?: string
+  isLoading?: boolean
 }
 
 function AuthShell({
@@ -28,6 +29,7 @@ function AuthShell({
   usernamePlaceholder = 'jane@company.com',
   usernameAutoComplete = 'email',
   submitError,
+  isLoading = false,
 }: AuthShellProps) {
   return (
     <div className="auth-page">
@@ -76,9 +78,18 @@ function AuthShell({
                 autoComplete="off"
               />
             </label>
-            <button className="primary-button" type="submit">
-              {actionLabel}
-              <ArrowRight size={18} />
+            <button className="primary-button" type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader size={18} className="animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  {actionLabel}
+                  <ArrowRight size={18} />
+                </>
+              )}
             </button>
           </form>
 
@@ -162,6 +173,7 @@ export function SignInPage() {
       usernamePlaceholder="Prajesh"
       usernameAutoComplete="off"
       submitError={error}
+      isLoading={loading}
       onSubmit={handleSubmit}
     />
   )
@@ -237,6 +249,7 @@ export function SignUpPage() {
       usernamePlaceholder="john_doe"
       usernameAutoComplete="username"
       submitError={error}
+      isLoading={loading}
       onSubmit={handleSubmit}
     />
   )
