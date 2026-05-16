@@ -125,8 +125,12 @@ export function SignInPage() {
 
 
       if (!response.ok) {
-        const errorData = await response.json()
-        setError(errorData.detail || 'Invalid username or password.')
+        try {
+          const errorData = await response.json()
+          setError(errorData.detail || 'Invalid username or password.')
+        } catch {
+          setError('Invalid username or password.')
+        }
         setLoading(false)
         return
       }
@@ -196,8 +200,12 @@ export function SignUpPage() {
       
 
       if (!response.ok) {
-        const errorData = await response.json()
-        setError(errorData.detail || 'Failed to create account.')
+        try {
+          const errorData = await response.json()
+          setError(errorData.detail || 'Failed to create account.')
+        } catch {
+          setError('Failed to create account.')
+        }
         setLoading(false)
         return
       }
