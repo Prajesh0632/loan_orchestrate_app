@@ -3,26 +3,24 @@ import { BrowserRouter, Link, Navigate, NavLink, Route, Routes } from 'react-rou
 import { SignInPage, SignUpPage } from './onboarding'
 import { HousingLoanFormPage } from './housing-loan-form'
 import { LoanDocumentsPage } from './loan-documents'
-import { useState,useEffect } from 'react'
-import {getDashboard} from './api/dashboard_api'
+import { useEffect, useState } from 'react'
+import { getDashboard, type DashboardData } from './api/dashboard_api'
 
 function DashboardPage() {
-const [data, setData] = useState(null)
+  const [data, setData] = useState<DashboardData | null>(null)
 
   useEffect(() => {
-
     async function load() {
       try {
-      const res = await getDashboard()
-      setData(res)
-    } catch (err) {
-      console.error(err)
-      setData(null)
-    }
+        const res = await getDashboard()
+        setData(res ?? null)
+      } catch (err) {
+        console.error(err)
+        setData(null)
+      }
     }
 
     load()
-
   }, [])
 
   if (!data) return <h2>Loading...</h2>
