@@ -1,6 +1,7 @@
 import { useState, type FormEvent, useEffect } from 'react'
 import { ArrowRight, Loader } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import {loginUser,signupUser} from './api/auth_api'
 
 type AuthShellProps = {
   heading: string
@@ -125,35 +126,15 @@ export function SignInPage() {
     const password = String(formData.get('auth_password') ?? '').trim()
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5173/api'
-      const response = await fetch(`${apiUrl}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      })
-
-
-      if (!response.ok) {
-        try {
-          const errorData = await response.json()
-          setError(errorData.detail || 'Invalid username or password.')
-        } catch {
-          setError('Invalid username or password.')
-        }
+      // const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5173/api'
+      const response = await loginUser({username,password})
+      if(!response.status) {
+        setError(response.message || 'Login failed')
         setLoading(false)
         return
-      }
-
-      const data = await response.json();
-      if(!data.status) {
-        setError(data.message || 'Login failed')
-        setLoading(false)
-        return
-
       }
       setLoading(false)
+      localStorage.setItem("access_token", response.access_token)
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setError('Connection error. Please try again.')
@@ -170,7 +151,7 @@ export function SignInPage() {
       footerText="New here?"
       footerLink={{ href: '/signup', label: 'Create an account' }}
       usernameLabel="Username"
-      usernamePlaceholder="Prajesh"
+      usernamePlaceholder="Username"
       usernameAutoComplete="off"
       submitError={error}
       isLoading={loading}
@@ -200,31 +181,11 @@ export function SignUpPage() {
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5173/api'
-      const response = await fetch(`${apiUrl}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      })
-
-      
-
-      if (!response.ok) {
-        try {
-          const errorData = await response.json()
-          setError(errorData.detail || 'Failed to create account.')
-        } catch {
-          setError('Failed to create account.')
-        }
-        setLoading(false)
-        return
-      }
-
-      const data = await response.json()
-     if(!data.status) {
-        setError(data.message)
+      // const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+      const response = await signupUser({username,password})
+      // const data = await response.json()
+     if(!response.status) {
+        setError(response.message)
         setLoading(false)
         return
 

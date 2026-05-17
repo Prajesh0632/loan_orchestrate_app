@@ -3,8 +3,30 @@ import { BrowserRouter, Link, Navigate, NavLink, Route, Routes } from 'react-rou
 import { SignInPage, SignUpPage } from './onboarding'
 import { HousingLoanFormPage } from './housing-loan-form'
 import { LoanDocumentsPage } from './loan-documents'
+import { useState,useEffect } from 'react'
+import {getDashboard} from './api/dashboard_api'
 
 function DashboardPage() {
+const [data, setData] = useState(null)
+
+  useEffect(() => {
+
+    async function load() {
+      try {
+      const res = await getDashboard()
+      setData(res)
+    } catch (err) {
+      console.error(err)
+      setData(null)
+    }
+    }
+
+    load()
+
+  }, [])
+
+  if (!data) return <h2>Loading...</h2>
+
   return (
     <div className="dashboard-page">
       <header className="topbar">
@@ -27,7 +49,7 @@ function DashboardPage() {
       <main className="dashboard-container">
         <section className="dashboard-hero dashboard-hero-center">
           <div>
-            <p className="eyebrow">Signed in</p>
+            <p className="eyebrow">Signed in as {data?.username} </p>
             <h1>Operations dashboard</h1>
             <p className="muted">Continue by filling the form.</p>
           </div>
