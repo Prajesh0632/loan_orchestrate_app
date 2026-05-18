@@ -128,6 +128,11 @@ export function SignInPage() {
     try {
       // const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5173/api'
       const response = await loginUser({username,password})
+      if (!response) {
+        setError('Login failed')
+        setLoading(false)
+        return
+      }
       if(!response.status) {
         setError(response.message || 'Login failed')
         setLoading(false)
@@ -184,6 +189,11 @@ export function SignUpPage() {
       // const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
       const response = await signupUser({username,password})
       // const data = await response.json()
+      if (!response) {
+        setError('Signup failed')
+        setLoading(false)
+        return
+      }
      if(!response.status) {
         setError(response.message)
         setLoading(false)

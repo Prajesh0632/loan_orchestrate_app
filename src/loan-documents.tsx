@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { BadgeInfo, FileText, Landmark } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { FlowCheckpointTrail, isApplicationComplete } from './loan-flow'
+import { buildLoanApplicationPayload, readStoredLoanDraft, readStoredLoanType, type LoanType } from './loan-draft'
+import { submitLoanApplication, type LoanApplicationDocument } from './api/loan_application_api'
 import { getTestDocumentFiles } from './loan-test-data'
 
-type LoanType = 'housing' | 'apartment' | 'land' | 'vehicle' | 'agriculture'
-
 type DocumentItem = {
+  fieldName: string
   required?: boolean
   title: string
   note: string
@@ -27,52 +28,51 @@ const loanTypeMeta: Record<
 }
 
 const commonDocuments: DocumentItem[] = [
-  { title: 'Citizenship / national ID', note: 'Required for identity verification.', required: true },
-  { title: 'Passport-size photo', note: 'Applicant and co-applicant if applicable.', required: true },
-  { title: 'PAN / tax registration', note: 'For salaried or business applicants where applicable.', required: true },
-  { title: 'Bank statement', note: 'Usually the latest 6 months.', required: true },
-  { title: 'Income proof', note: 'Salary slip, business income, remittance proof, or tax returns.', required: true },
+  { fieldName: 'citizenship_or_national_id', title: 'Citizenship / national ID', note: 'Required for identity verification.', required: true },
+  { fieldName: 'passport_size_photo', title: 'Passport-size photo', note: 'Applicant and co-applicant if applicable.', required: true },
+  { fieldName: 'pan_or_tax_registration', title: 'PAN / tax registration', note: 'For salaried or business applicants where applicable.', required: true },
+  { fieldName: 'bank_statement', title: 'Bank statement', note: 'Usually the latest 6 months.', required: true },
+  { fieldName: 'income_proof', title: 'Income proof', note: 'Salary slip, business income, remittance proof, or tax returns.', required: true },
 ]
 
 const documentsByLoanType: Record<LoanType, DocumentItem[]> = {
   housing: [
-    { title: 'Title deed / लालपुर्जा', note: 'Proof of ownership of the property being financed.', required: true },
-    { title: 'Land / property tax receipt', note: 'Latest local tax receipt for the property.', required: true },
-    { title: 'Site plan / map', note: 'Property map or location sketch.', required: true },
-    { title: 'Valuation report', note: 'Approved valuation of the land or house.', required: true },
-    { title: 'Construction estimate / quotation', note: 'Builder estimate if construction is planned.', required: false },
+    { fieldName: 'title_deed_or_lalpurja', title: 'Title deed / लालपुर्जा', note: 'Proof of ownership of the property being financed.', required: true },
+    { fieldName: 'land_or_property_tax_receipt', title: 'Land / property tax receipt', note: 'Latest local tax receipt for the property.', required: true },
+    { fieldName: 'site_plan_or_map', title: 'Site plan / map', note: 'Property map or location sketch.', required: true },
+    { fieldName: 'valuation_report', title: 'Valuation report', note: 'Approved valuation of the land or house.', required: true },
+    { fieldName: 'construction_estimate_or_quotation', title: 'Construction estimate / quotation', note: 'Builder estimate if construction is planned.', required: false },
   ],
   apartment: [
-    { title: 'Booking / allotment letter', note: 'Issued by the developer or seller.', required: true },
-    { title: 'Project quotation', note: 'Apartment booking quotation or invoice.', required: true },
-    { title: 'Building / project approval papers', note: 'Developer approval documents if available.', required: true },
-    { title: 'Unit / floor plan', note: 'Plan showing the flat and floor details.', required: true },
-    { title: 'Developer ownership papers', note: 'Land/title documents of the project where available.', required: false },
+    { fieldName: 'booking_or_allotment_letter', title: 'Booking / allotment letter', note: 'Issued by the developer or seller.', required: true },
+    { fieldName: 'project_quotation', title: 'Project quotation', note: 'Apartment booking quotation or invoice.', required: true },
+    { fieldName: 'building_or_project_approval_papers', title: 'Building / project approval papers', note: 'Developer approval documents if available.', required: true },
+    { fieldName: 'unit_or_floor_plan', title: 'Unit / floor plan', note: 'Plan showing the flat and floor details.', required: true },
+    { fieldName: 'developer_ownership_papers', title: 'Developer ownership papers', note: 'Land/title documents of the project where available.', required: false },
   ],
   land: [
-    { title: 'Title deed / लालपुर्जा', note: 'Ownership proof for the land being purchased.', required: true },
-    { title: 'Plot / kitta map', note: 'Survey or plot map of the land.', required: true },
-    { title: 'Land tax receipt', note: 'Latest land revenue / tax payment.', required: true },
-    { title: 'Purchase agreement', note: 'Sale agreement or commitment letter.', required: true },
-    { title: 'Valuation report', note: 'Valuation from an approved valuator.', required: true },
+    { fieldName: 'title_deed_or_lalpurja', title: 'Title deed / लालपुर्जा', note: 'Ownership proof for the land being purchased.', required: true },
+    { fieldName: 'plot_or_kitta_map', title: 'Plot / kitta map', note: 'Survey or plot map of the land.', required: true },
+    { fieldName: 'land_tax_receipt', title: 'Land tax receipt', note: 'Latest land revenue / tax payment.', required: true },
+    { fieldName: 'purchase_agreement', title: 'Purchase agreement', note: 'Sale agreement or commitment letter.', required: true },
+    { fieldName: 'valuation_report', title: 'Valuation report', note: 'Valuation from an approved valuator.', required: true },
   ],
   vehicle: [
-    { title: 'Dealer quotation / proforma invoice', note: 'Quoted by the authorized seller.', required: true },
-    { title: 'Vehicle specification sheet', note: 'Make, model, year, and key vehicle details.', required: true },
-    { title: 'Used vehicle valuation', note: 'Needed if the vehicle is second-hand.', required: false },
-    { title: 'Driving license', note: 'Helpful for personal vehicle loans.', required: false },
-    { title: 'Purchase agreement', note: 'Sale agreement or booking document.', required: true },
+    { fieldName: 'dealer_quotation_or_proforma_invoice', title: 'Dealer quotation / proforma invoice', note: 'Quoted by the authorized seller.', required: true },
+    { fieldName: 'vehicle_specification_sheet', title: 'Vehicle specification sheet', note: 'Make, model, year, and key vehicle details.', required: true },
+    { fieldName: 'used_vehicle_valuation', title: 'Used vehicle valuation', note: 'Needed if the vehicle is second-hand.', required: false },
+    { fieldName: 'driving_license', title: 'Driving license', note: 'Helpful for personal vehicle loans.', required: false },
+    { fieldName: 'purchase_agreement', title: 'Purchase agreement', note: 'Sale agreement or booking document.', required: true },
   ],
   agriculture: [
-    { title: 'Land ownership / lease agreement', note: 'Farm land proof or lease contract.', required: true },
-    { title: 'Agricultural plan', note: 'Crop, livestock, or production plan.', required: true },
-    { title: 'Supplier quotation', note: 'Quotation for seeds, livestock, equipment, or materials.', required: true },
-    { title: 'Irrigation / utility document', note: 'Water source, irrigation, or utility details if available.', required: false },
-    { title: 'Farm registration / PAN', note: 'If the farm or business is formally registered.', required: false },
+    { fieldName: 'land_ownership_or_lease_agreement', title: 'Land ownership / lease agreement', note: 'Farm land proof or lease contract.', required: true },
+    { fieldName: 'agricultural_plan', title: 'Agricultural plan', note: 'Crop, livestock, or production plan.', required: true },
+    { fieldName: 'supplier_quotation', title: 'Supplier quotation', note: 'Quotation for seeds, livestock, equipment, or materials.', required: true },
+    { fieldName: 'irrigation_or_utility_document', title: 'Irrigation / utility document', note: 'Water source, irrigation, or utility details if available.', required: false },
+    { fieldName: 'farm_registration_or_pan', title: 'Farm registration / PAN', note: 'If the farm or business is formally registered.', required: false },
   ],
 }
 
-const DRAFT_STORAGE_KEY = 'aclo-loan-draft'
 const FILE_DB_NAME = 'aclo-loan-files'
 const FILE_STORE_NAME = 'files'
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -80,37 +80,6 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
 type StoredLoanFile = {
   file: File
   updatedAt: number
-}
-
-function readLoanTypeFromDraft(): LoanType | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
-  try {
-    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY)
-    if (!raw) {
-      return null
-    }
-
-    const parsed = JSON.parse(raw) as { loanType?: LoanType }
-    return parsed.loanType ?? null
-  } catch {
-    return null
-  }
-}
-
-function readDraft(): Record<string, string> {
-  if (typeof window === 'undefined') {
-    return {}
-  }
-
-  try {
-    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as Record<string, string>) : {}
-  } catch {
-    return {}
-  }
 }
 
 function openFileDb(): Promise<IDBDatabase> {
@@ -257,12 +226,14 @@ function DocumentUpload({
 export function LoanDocumentsPage() {
   const location = useLocation()
   const loanType =
-    (location.state as { loanType?: LoanType } | null)?.loanType ?? readLoanTypeFromDraft() ?? 'housing'
+    (location.state as { loanType?: LoanType } | null)?.loanType ?? readStoredLoanType() ?? 'housing'
   const loanMeta = loanTypeMeta[loanType]
   const documentItems = [...commonDocuments, ...documentsByLoanType[loanType]]
-  const applicationComplete = isApplicationComplete(readDraft(), loanType)
+  const applicationComplete = isApplicationComplete(readStoredLoanDraft(), loanType)
   const [documentsComplete, setDocumentsComplete] = useState(false)
   const [documentsLoading, setDocumentsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
   const flowSteps = [
     {
@@ -313,6 +284,49 @@ export function LoanDocumentsPage() {
       Object.entries(files).map(([title, file]) => saveStoredFile(`${loanType}:${title}`, file)),
     )
     setRefreshToken((current) => current + 1)
+  }
+
+  const readUploadedDocuments = async (): Promise<LoanApplicationDocument[]> => {
+    const storedDocuments = await Promise.all(
+      documentItems.map(async (document) => ({
+        document,
+        stored: await readStoredFile(`${loanType}:${document.title}`),
+      })),
+    )
+
+    return storedDocuments.flatMap(({ document, stored }) =>
+      stored
+        ? [
+            {
+              file: stored.file,
+              fieldName: document.fieldName,
+              required: document.required ?? false,
+              title: document.title,
+            },
+          ]
+        : [],
+    )
+  }
+
+  const handleSubmitApplication = async () => {
+    setSubmitMessage(null)
+    setIsSubmitting(true)
+
+    try {
+      const payload = buildLoanApplicationPayload(readStoredLoanDraft(), loanType)
+      const documents = await readUploadedDocuments()
+      const response = await submitLoanApplication(payload, documents)
+
+      if (!response?.status) {
+        throw new Error(response?.message || 'Could not submit application data.')
+      }
+
+      setSubmitMessage(`${response.message} Application ID: ${response.application_id}`)
+    } catch (error) {
+      setSubmitMessage(error instanceof Error ? error.message : 'Could not submit application data.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -404,10 +418,11 @@ export function LoanDocumentsPage() {
           <button className="secondary-button" type="button">
             Save draft
           </button>
-          <button className="primary-button" type="submit">
-            Submit application
+          <button className="primary-button" type="button" disabled={isSubmitting} onClick={() => void handleSubmitApplication()}>
+            {isSubmitting ? 'Submitting...' : 'Submit application'}
           </button>
         </div>
+        {submitMessage ? <p className="doc-summary">{submitMessage}</p> : null}
       </main>
     </div>
   )

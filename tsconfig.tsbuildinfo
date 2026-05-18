@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/housing-loan-form.tsx","./src/loan-documents.tsx","./src/loan-flow.tsx","./src/loan-test-data.ts","./src/main.tsx","./src/onboarding.tsx","./src/vite-env.d.ts"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/housing-loan-form.tsx","./src/loan-documents.tsx","./src/loan-draft.ts","./src/loan-flow.tsx","./src/loan-test-data.ts","./src/main.tsx","./src/onboarding.tsx","./src/vite-env.d.ts","./src/api/auth_api.ts","./src/api/dashboard_api.ts","./src/api/loan_application_api.ts"],"version":"5.9.3"}

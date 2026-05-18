@@ -16,14 +16,14 @@ interface AuthResponse {
   access_token: string
 }
 
-export const loginUser = (data: LoginCredentials): Promise<AuthResponse> => {
+export const loginUser = (data: LoginCredentials): Promise<AuthResponse | undefined> => {
   return request("/login", {
     method: "POST",
     body: JSON.stringify(data)
   })
 }
 
-export const signupUser = (data: SignupCredentials): Promise<AuthResponse> => {
+export const signupUser = (data: SignupCredentials): Promise<AuthResponse | undefined> => {
   return request("/signup", {
     method: "POST",
     body: JSON.stringify(data),

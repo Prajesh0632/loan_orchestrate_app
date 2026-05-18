@@ -27,7 +27,7 @@ const TEST_DRAFT: LoanDraft = {
   email: 'prajesh@example.com',
   father_name: 'Ram Bahadur',
   grandfather_name: 'Hari Bahadur',
-  spouse_name: 'Sita',
+  spouse_name: 'Spouse',
   dependents_parents: '2',
   dependents_children: '1',
   occupation: 'Service',

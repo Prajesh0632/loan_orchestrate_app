@@ -2,13 +2,8 @@ import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { BadgeInfo, BriefcaseBusiness, FileText, Landmark, Loader2, MapPin, ShieldCheck, User, WalletCards } from 'lucide-react'
 import { FlowCheckpointTrail, isApplicationComplete } from './loan-flow'
+import { DRAFT_STORAGE_KEY, buildSectionedDraft, readStoredLoanDraft, type LoanDraft, type LoanType } from './loan-draft'
 import { getTestDraft } from './loan-test-data'
-
-type LoanType = 'housing' | 'apartment' | 'land' | 'vehicle' | 'agriculture'
-
-type LoanDraft = Record<string, string>
-
-const DRAFT_STORAGE_KEY = 'aclo-loan-draft'
 
 const nepalDistricts = [
   'Achham',
@@ -143,6 +138,7 @@ function Field({
   suggestions,
   className,
   textOnly = false,
+  numberOnly = false,
 }: {
   label: string
   placeholder?: string
@@ -155,6 +151,7 @@ function Field({
   suggestions?: readonly string[]
   className?: string
   textOnly?: boolean
+  numberOnly?: boolean
 }) {
   const listId = suggestions?.length ? `${name ?? label.replace(/\s+/g, '-').toLowerCase()}-options` : undefined
 
@@ -163,6 +160,9 @@ function Field({
       // Remove any digits from the input
       const filteredValue = event.target.value.replace(/[0-9]/g, '')
       event.target.value = filteredValue
+    }
+    if (numberOnly) {
+      event.target.value = event.target.value.replace(/\D/g, '')
     }
     onChange?.(event)
   }
@@ -373,21 +373,8 @@ function Section({
   )
 }
 
-function readDraft(): LoanDraft {
-  if (typeof window === 'undefined') {
-    return {}
-  }
-
-  try {
-    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as LoanDraft) : {}
-  } catch {
-    return {}
-  }
-}
-
 export function HousingLoanFormPage() {
-  const [draft, setDraft] = useState<LoanDraft>(() => readDraft())
+  const [draft, setDraft] = useState<LoanDraft>(() => readStoredLoanDraft())
   const loanType = (draft.loanType as LoanType | undefined) ?? 'housing'
   const loanMeta = loanTypeMeta[loanType]
   const applicationComplete = isApplicationComplete(draft, loanType)
@@ -414,7 +401,7 @@ export function HousingLoanFormPage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
+      window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(buildSectionedDraft(draft)))
     } catch {
       // Ignore storage failures and keep the form usable.
     }
@@ -435,8 +422,8 @@ export function HousingLoanFormPage() {
           <div className="form-grid three-up">
             <Field label="Property address" placeholder="Kathmandu / Lalitpur / Bhaktapur" wide name="property_address" value={draft.property_address ?? ''} onChange={(event) => setDraftField('property_address', event.target.value)} />
             <Field label="Land area" placeholder="10 anna / sq.ft." name="land_area" value={draft.land_area ?? ''} onChange={(event) => setDraftField('land_area', event.target.value)} />
-            <Field label="Built-up area" placeholder="2,100 sq.ft." name="built_up_area" value={draft.built_up_area ?? ''} onChange={(event) => setDraftField('built_up_area', event.target.value)} />
-            <Field label="No. of floors" placeholder="2" type="number" name="no_of_floors" value={draft.no_of_floors ?? ''} onChange={(event) => setDraftField('no_of_floors', event.target.value)} />
+            <Field label="Built-up area" placeholder="2,100 sq.ft." optional name="built_up_area" value={draft.built_up_area ?? ''} onChange={(event) => setDraftField('built_up_area', event.target.value)} />
+            <Field label="No. of floors" placeholder="2" type="number" optional name="no_of_floors" value={draft.no_of_floors ?? ''} onChange={(event) => setDraftField('no_of_floors', event.target.value)} />
             <SelectField
               label="Ownership type"
               options={['Self-owned', 'Joint ownership', 'Family property', 'To be acquired']}
@@ -453,7 +440,7 @@ export function HousingLoanFormPage() {
           <div className="form-grid three-up">
             <Field label="Project / building name" placeholder="Apartment project name" wide name="project_name" value={draft.project_name ?? ''} onChange={(event) => setDraftField('project_name', event.target.value)} />
             <Field label="Unit / flat no." placeholder="A-402" name="unit_no" value={draft.unit_no ?? ''} onChange={(event) => setDraftField('unit_no', event.target.value)} />
-            <Field label="Floor no." placeholder="4" type="number" name="floor_no" value={draft.floor_no ?? ''} onChange={(event) => setDraftField('floor_no', event.target.value)} />
+            <Field label="Floor no." placeholder="4" type="number" optional name="floor_no" value={draft.floor_no ?? ''} onChange={(event) => setDraftField('floor_no', event.target.value)} />
             <Field label="Built-up area" placeholder="1,250 sq.ft." name="apartment_built_up_area" value={draft.apartment_built_up_area ?? ''} onChange={(event) => setDraftField('apartment_built_up_area', event.target.value)} />
             <Field label="Parking slot" placeholder="P-21" optional name="parking_slot" value={draft.parking_slot ?? ''} onChange={(event) => setDraftField('parking_slot', event.target.value)} />
             <SelectField
@@ -492,7 +479,7 @@ export function HousingLoanFormPage() {
             <Field label="Make / model" placeholder="Toyota Corolla" name="vehicle_model" value={draft.vehicle_model ?? ''} onChange={(event) => setDraftField('vehicle_model', event.target.value)} />
             <Field label="Year" placeholder="2022" type="number" name="vehicle_year" value={draft.vehicle_year ?? ''} onChange={(event) => setDraftField('vehicle_year', event.target.value)} />
             <Field label="Dealer / seller" placeholder="Authorized dealer name" wide name="vehicle_seller" value={draft.vehicle_seller ?? ''} onChange={(event) => setDraftField('vehicle_seller', event.target.value)} />
-            <Field label="Quotation / proforma invoice no." placeholder="Invoice reference" name="vehicle_invoice_no" value={draft.vehicle_invoice_no ?? ''} onChange={(event) => setDraftField('vehicle_invoice_no', event.target.value)} />
+            <Field label="Quotation / proforma invoice no." placeholder="Invoice reference" optional name="vehicle_invoice_no" value={draft.vehicle_invoice_no ?? ''} onChange={(event) => setDraftField('vehicle_invoice_no', event.target.value)} />
             <Field label="Purchase price" placeholder="3,500,000" type="number" name="vehicle_purchase_price" value={draft.vehicle_purchase_price ?? ''} onChange={(event) => setDraftField('vehicle_purchase_price', event.target.value)} />
             <Field label="Down payment" placeholder="1,000,000" type="number" name="vehicle_down_payment" value={draft.vehicle_down_payment ?? ''} onChange={(event) => setDraftField('vehicle_down_payment', event.target.value)} />
             <Field label="Loan amount requested" placeholder="2,500,000" type="number" name="vehicle_loan_amount" value={draft.vehicle_loan_amount ?? ''} onChange={(event) => setDraftField('vehicle_loan_amount', event.target.value)} />
@@ -515,7 +502,7 @@ export function HousingLoanFormPage() {
               value={draft.agri_ownership_type ?? ''}
               onChange={(event) => setDraftField('agri_ownership_type', event.target.value)}
             />
-            <Field label="Irrigation source" placeholder="Borewell / canal / rainfed / tank" name="irrigation_source" value={draft.irrigation_source ?? ''} onChange={(event) => setDraftField('irrigation_source', event.target.value)} />
+            <Field label="Irrigation source" placeholder="Borewell / canal / rainfed / tank" optional name="irrigation_source" value={draft.irrigation_source ?? ''} onChange={(event) => setDraftField('irrigation_source', event.target.value)} />
             <Field label="Farm equipment / livestock" placeholder="Tractor, cows, poultry, etc." wide optional name="farm_equipment" value={draft.farm_equipment ?? ''} onChange={(event) => setDraftField('farm_equipment', event.target.value)} />
             <Field label="Estimated project cost" placeholder="3,500,000" type="number" name="agri_project_cost" value={draft.agri_project_cost ?? ''} onChange={(event) => setDraftField('agri_project_cost', event.target.value)} />
             <Field label="Expected harvest / income cycle" placeholder="Monthly / seasonal / annual" optional name="harvest_cycle" value={draft.harvest_cycle ?? ''} onChange={(event) => setDraftField('harvest_cycle', event.target.value)} />
@@ -589,7 +576,7 @@ export function HousingLoanFormPage() {
                 }}
               />
               <Field label="Requested amount (NPR)" placeholder="5,000,000" type="number" name="requested_amount" value={draft.requested_amount ?? ''} onChange={(event) => setDraftField('requested_amount', event.target.value)} />
-              <Field label="Amount in words" placeholder="Five million Nepalese rupees" wide name="requested_amount_words" value={draft.requested_amount_words ?? ''} onChange={(event) => setDraftField('requested_amount_words', event.target.value)} />
+              <Field label="Amount in words" placeholder="Five million Nepalese rupees" wide optional name="requested_amount_words" value={draft.requested_amount_words ?? ''} onChange={(event) => setDraftField('requested_amount_words', event.target.value)} />
               <SelectField
                 label="Purpose"
                 options={[
@@ -605,7 +592,7 @@ export function HousingLoanFormPage() {
                 onChange={(event) => setDraftField('purpose', event.target.value)}
               />
               <Field label="Repayment period (years)" placeholder="15" type="number" name="repayment_period_years" value={draft.repayment_period_years ?? ''} onChange={(event) => setDraftField('repayment_period_years', event.target.value)} />
-              <Field label="Loan tenure start date" placeholder="YYYY-MM-DD" type="date" name="loan_tenure_start_date" value={draft.loan_tenure_start_date ?? ''} onChange={(event) => setDraftField('loan_tenure_start_date', event.target.value)} />
+              <Field label="Loan tenure start date" placeholder="YYYY-MM-DD" type="date" optional name="loan_tenure_start_date" value={draft.loan_tenure_start_date ?? ''} onChange={(event) => setDraftField('loan_tenure_start_date', event.target.value)} />
             </div>
           </Section>
 
@@ -614,9 +601,9 @@ export function HousingLoanFormPage() {
               <Field label="Applicant name" placeholder="Prajesh" name="applicant_name" value={draft.applicant_name ?? ''} onChange={(event) => setDraftField('applicant_name', event.target.value)} textOnly />
               <Field label="Date of birth / establishment" placeholder="YYYY-MM-DD" type="date" name="dob_or_establishment" value={draft.dob_or_establishment ?? ''} onChange={(event) => setDraftField('dob_or_establishment', event.target.value)} />
               <SelectField label="Calendar type" options={['A.D.', 'B.S.']} name="calendar_type" value={draft.calendar_type ?? ''} onChange={(event) => setDraftField('calendar_type', event.target.value)} />
-              <Field label="Permanent house no." placeholder="12" name="permanent_house_no" value={draft.permanent_house_no ?? ''} onChange={(event) => setDraftField('permanent_house_no', event.target.value)} />
+              <Field label="Permanent house no." placeholder="12" optional name="permanent_house_no" value={draft.permanent_house_no ?? ''} onChange={(event) => setDraftField('permanent_house_no', event.target.value)} />
               <Field label="Ward no." placeholder="5" name="ward_no" value={draft.ward_no ?? ''} onChange={(event) => setDraftField('ward_no', event.target.value)} />
-              <Field label="Street name" placeholder="Main Road" name="street_name" value={draft.street_name ?? ''} onChange={(event) => setDraftField('street_name', event.target.value)} />
+              <Field label="Street name" placeholder="Main Road" optional name="street_name" value={draft.street_name ?? ''} onChange={(event) => setDraftField('street_name', event.target.value)} />
               <NepalCityField
                 value={draft.city ?? ''}
                 onChange={(event) => setDraftField('city', event.target.value)}
@@ -629,17 +616,17 @@ export function HousingLoanFormPage() {
                 value={draft.district ?? ''}
                 onChange={(event) => setDraftField('district', event.target.value)}
               />
-              <Field label="PO Box" placeholder="12345" name="po_box" value={draft.po_box ?? ''} onChange={(event) => setDraftField('po_box', event.target.value)} />
-              <Field label="Tel: office" placeholder="01-5555555" name="telephone_office" value={draft.telephone_office ?? ''} onChange={(event) => setDraftField('telephone_office', event.target.value)} />
-              <Field label="Residence" placeholder="01-4444444" name="telephone_residence" value={draft.telephone_residence ?? ''} onChange={(event) => setDraftField('telephone_residence', event.target.value)} />
-              <Field label="Mobile" placeholder="98XXXXXXXX" name="mobile" value={draft.mobile ?? ''} onChange={(event) => setDraftField('mobile', event.target.value)} />
+              <Field label="PO Box" placeholder="12345" optional name="po_box" value={draft.po_box ?? ''} onChange={(event) => setDraftField('po_box', event.target.value)} />
+              <Field label="Tel: office" placeholder="01-5555555" optional name="telephone_office" value={draft.telephone_office ?? ''} onChange={(event) => setDraftField('telephone_office', event.target.value)} />
+              <Field label="Residence" placeholder="01-4444444" optional name="telephone_residence" value={draft.telephone_residence ?? ''} onChange={(event) => setDraftField('telephone_residence', event.target.value)} />
+              <Field label="Mobile" placeholder="98XXXXXXXX" type="tel" numberOnly name="mobile" value={draft.mobile ?? ''} onChange={(event) => setDraftField('mobile', event.target.value)} />
               <Field label="Fax" placeholder="Optional" optional name="fax" value={draft.fax ?? ''} onChange={(event) => setDraftField('fax', event.target.value)} />
-              <Field label="Email" placeholder="name@example.com" name="email" value={draft.email ?? ''} onChange={(event) => setDraftField('email', event.target.value)} />
+              <Field label="Email" placeholder="name@example.com" optional name="email" value={draft.email ?? ''} onChange={(event) => setDraftField('email', event.target.value)} />
               <Field label="Name of father" placeholder="Father's name" name="father_name" value={draft.father_name ?? ''} onChange={(event) => setDraftField('father_name', event.target.value)} textOnly />
               <Field label="Name of grandfather" placeholder="Grandfather's name" name="grandfather_name" value={draft.grandfather_name ?? ''} onChange={(event) => setDraftField('grandfather_name', event.target.value)} textOnly />
               <Field label="Spouse's name" placeholder="Spouse's name" optional name="spouse_name" value={draft.spouse_name ?? ''} onChange={(event) => setDraftField('spouse_name', event.target.value)} textOnly />
-              <Field label="Dependents (parents)" placeholder="2" type="number" name="dependents_parents" value={draft.dependents_parents ?? ''} onChange={(event) => setDraftField('dependents_parents', event.target.value)} />
-              <Field label="Dependents (children)" placeholder="1" type="number" name="dependents_children" value={draft.dependents_children ?? ''} onChange={(event) => setDraftField('dependents_children', event.target.value)} />
+              <Field label="Dependents (parents)" placeholder="2" type="number" optional name="dependents_parents" value={draft.dependents_parents ?? ''} onChange={(event) => setDraftField('dependents_parents', event.target.value)} />
+              <Field label="Dependents (children)" placeholder="1" type="number" optional name="dependents_children" value={draft.dependents_children ?? ''} onChange={(event) => setDraftField('dependents_children', event.target.value)} />
             </div>
           </Section>
 
@@ -650,9 +637,9 @@ export function HousingLoanFormPage() {
           >
             <div className="form-grid two-up">
               <Field label="Applicant occupation" placeholder="Service / Business / Self-employed" name="occupation" value={draft.occupation ?? ''} onChange={(event) => setDraftField('occupation', event.target.value)} textOnly />
-              <Field label="Firm / company name" placeholder="Company name" name="company_name" value={draft.company_name ?? ''} onChange={(event) => setDraftField('company_name', event.target.value)} textOnly />
-              <Field label="Work address" placeholder="Business address" wide name="work_address" value={draft.work_address ?? ''} onChange={(event) => setDraftField('work_address', event.target.value)} />
-              <Field label="Years there" placeholder="3" type="number" name="years_there" value={draft.years_there ?? ''} onChange={(event) => setDraftField('years_there', event.target.value)} />
+              <Field label="Firm / company name" placeholder="Company name" optional name="company_name" value={draft.company_name ?? ''} onChange={(event) => setDraftField('company_name', event.target.value)} textOnly />
+              <Field label="Work address" placeholder="Business address" wide optional name="work_address" value={draft.work_address ?? ''} onChange={(event) => setDraftField('work_address', event.target.value)} />
+              <Field label="Years there" placeholder="3" type="number" optional name="years_there" value={draft.years_there ?? ''} onChange={(event) => setDraftField('years_there', event.target.value)} />
               <Field label="Previous employer (if any)" placeholder="Previous company" optional name="previous_employer" value={draft.previous_employer ?? ''} onChange={(event) => setDraftField('previous_employer', event.target.value)} />
               <Field
                 label="Nature of business (if self employed)"
@@ -688,12 +675,12 @@ export function HousingLoanFormPage() {
             <div className="form-section-group">
               <h3>Assets</h3>
               <div className="form-grid three-up">
-                <Field label="Deposit with NMB" placeholder="0" type="number" name="deposit_nmb" value={draft.deposit_nmb ?? ''} onChange={(event) => setDraftField('deposit_nmb', event.target.value)} />
-                <Field label="Deposit with other bank" placeholder="0" type="number" name="deposit_other_bank" value={draft.deposit_other_bank ?? ''} onChange={(event) => setDraftField('deposit_other_bank', event.target.value)} />
-                <Field label="Shares / bonds / debentures" placeholder="0" type="number" name="shares_bonds" value={draft.shares_bonds ?? ''} onChange={(event) => setDraftField('shares_bonds', event.target.value)} />
-                <Field label="Land and / or building / flat" placeholder="0" type="number" name="assets_land_building" value={draft.assets_land_building ?? ''} onChange={(event) => setDraftField('assets_land_building', event.target.value)} />
-                <Field label="Vehicles brand / year" placeholder="Toyota 2020" name="assets_vehicle" value={draft.assets_vehicle ?? ''} onChange={(event) => setDraftField('assets_vehicle', event.target.value)} />
-                <Field label="Furniture & appliances" placeholder="0" type="number" name="furniture_appliances" value={draft.furniture_appliances ?? ''} onChange={(event) => setDraftField('furniture_appliances', event.target.value)} />
+                <Field label="Deposits within our bank" placeholder="0" type="number" optional name="deposit_nmb" value={draft.deposit_nmb ?? ''} onChange={(event) => setDraftField('deposit_nmb', event.target.value)} />
+                <Field label="Deposit with other bank" placeholder="0" type="number" optional name="deposit_other_bank" value={draft.deposit_other_bank ?? ''} onChange={(event) => setDraftField('deposit_other_bank', event.target.value)} />
+                <Field label="Shares / bonds / debentures" placeholder="0" type="number" optional name="shares_bonds" value={draft.shares_bonds ?? ''} onChange={(event) => setDraftField('shares_bonds', event.target.value)} />
+                <Field label="Land and / or building / flat" placeholder="0" type="number" optional name="assets_land_building" value={draft.assets_land_building ?? ''} onChange={(event) => setDraftField('assets_land_building', event.target.value)} />
+                <Field label="Vehicles brand / year" placeholder="Toyota 2020" optional name="assets_vehicle" value={draft.assets_vehicle ?? ''} onChange={(event) => setDraftField('assets_vehicle', event.target.value)} />
+                <Field label="Furniture & appliances" placeholder="0" type="number" optional name="furniture_appliances" value={draft.furniture_appliances ?? ''} onChange={(event) => setDraftField('furniture_appliances', event.target.value)} />
                 <Field label="Other assets" placeholder="Describe other assets" wide optional name="other_assets" value={draft.other_assets ?? ''} onChange={(event) => setDraftField('other_assets', event.target.value)} />
               </div>
             </div>
@@ -701,12 +688,12 @@ export function HousingLoanFormPage() {
             <div className="form-section-group">
               <h3>Liabilities</h3>
               <div className="form-grid three-up">
-                <Field label="Loan from NMB" placeholder="0" type="number" name="loan_nmb" value={draft.loan_nmb ?? ''} onChange={(event) => setDraftField('loan_nmb', event.target.value)} />
-                <Field label="Loan from other bank" placeholder="0" type="number" name="loan_other_bank" value={draft.loan_other_bank ?? ''} onChange={(event) => setDraftField('loan_other_bank', event.target.value)} />
+                <Field label="Loan from NMB" placeholder="0" type="number" optional name="loan_nmb" value={draft.loan_nmb ?? ''} onChange={(event) => setDraftField('loan_nmb', event.target.value)} />
+                <Field label="Loan from other bank" placeholder="0" type="number" optional name="loan_other_bank" value={draft.loan_other_bank ?? ''} onChange={(event) => setDraftField('loan_other_bank', event.target.value)} />
                 <Field label="Loan from employer" placeholder="0" type="number" optional name="loan_employer" value={draft.loan_employer ?? ''} onChange={(event) => setDraftField('loan_employer', event.target.value)} />
                 <Field label="Credit card limit" placeholder="0" type="number" optional name="credit_card_limit" value={draft.credit_card_limit ?? ''} onChange={(event) => setDraftField('credit_card_limit', event.target.value)} />
                 <Field label="Loan from other sources" placeholder="0" type="number" optional name="loan_other_sources" value={draft.loan_other_sources ?? ''} onChange={(event) => setDraftField('loan_other_sources', event.target.value)} />
-                <Field label="Rent" placeholder="0" type="number" name="rent" value={draft.rent ?? ''} onChange={(event) => setDraftField('rent', event.target.value)} />
+                <Field label="Rent" placeholder="0" type="number" optional name="rent" value={draft.rent ?? ''} onChange={(event) => setDraftField('rent', event.target.value)} />
                 <Field label="Land / building tax" placeholder="0" type="number" optional name="land_building_tax" value={draft.land_building_tax ?? ''} onChange={(event) => setDraftField('land_building_tax', event.target.value)} />
                 <Field label="Income tax" placeholder="0" type="number" optional name="income_tax" value={draft.income_tax ?? ''} onChange={(event) => setDraftField('income_tax', event.target.value)} />
               </div>
