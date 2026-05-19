@@ -321,7 +321,7 @@ export function LoanDocumentsPage() {
         throw new Error(response?.message || 'Could not submit application data.')
       }
 
-      setSubmitMessage(`${response.message} Application ID: ${response.application_id}`)
+      setSubmitMessage(`${response.message}`)
     } catch (error) {
       setSubmitMessage(error instanceof Error ? error.message : 'Could not submit application data.')
     } finally {
